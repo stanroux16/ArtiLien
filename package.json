@@ -1,0 +1,11 @@
+{
+  "name": "artilien",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @artilien/web dev",
+    "dev:mobile": "pnpm --filter @artilien/mobile start",
+    "typecheck": "pnpm -r typecheck",
+    "build:web": "pnpm --filter @artilien/web build"
+  }
+}
