@@ -1,7 +1,0 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-body { @apply bg-fond text-texte font-sans; }
-:focus-visible { outline: 3px solid #F28C28; outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
