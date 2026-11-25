@@ -1,0 +1,28 @@
+{
+  "slug": "demo-auto",
+  "secteur": "auto",
+  "nom": "Garage Dupont",
+  "metier": "garage automobile",
+  "ville": "Lille",
+  "zone": "métropole lilloise",
+  "tel": "03 00 00 00 00",
+  "email": "contact@exemple.fr",
+  "adresse": "25 avenue de l'Exemple, 59000 Lille",
+  "titre": [
+    "Garage et carrosserie",
+    "à Lille"
+  ],
+  "slogan": "Entretien, mécanique et carrosserie toutes marques, devis détaillé avant travaux.",
+  "accroche": "Votre véhicule entre de bonnes mains : diagnostic honnête, délais annoncés et pièces garanties.",
+  "presentation": [
+    "Garage Dupont est une entreprise de garage automobile installée à Lille.",
+    "Nous vous accueillons avec une priorité : un travail soigné, des prix clairs et un échange simple avec vous."
+  ],
+  "dirigeant": "Prénom Dupont",
+  "fonction": "gérant",
+  "icone_logo": "car",
+  "cta": "Demander un devis",
+  "agence": "Stanislas Roux",
+  "annee": "2026",
+  "maquette": true
+}

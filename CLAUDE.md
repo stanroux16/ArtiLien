@@ -21,6 +21,9 @@ Service B2B : réponses personnalisées aux avis Google sans réponse, vendues p
 - Autres docs Drive : Playbook commercial, Note juridique, dossier Factures (Recettes / Dépenses).
 - Outils : Gmail (artilien.contact@gmail.com), Stripe (liens de paiement créés par Stan), Apify (lecture des avis uniquement, plafond 45 $/mois), WebSearch/WebFetch pour trouver commerces et e-mails.
 
+## Activité 2 : sites web pour commerçants sans site (depuis le 25/11/2026)
+Maquette en ligne envoyée par mail, puis installation + abonnement. Détail : `docs/plan-sites-web.md` ; code du générateur : `sites/` (`sites/README.md`). Agents : `Sites – Prospection` et `Sites – Clients et suivi` ; onglets CRM `Prospects sites`, `Clients sites`, `Maquettes`, `Paramètres sites`. Le dépôt est public : jamais de données de prospects ni de clients ici.
+
 ## Limites fixes (ne jamais contourner)
 - Mail B2B uniquement, sur adresse **publiée** par le commerce ; identité + source + « répondez STOP » ; désinscrits jamais recontactés ; 1 relance max (2 si test validé).
 - Jamais de réponse publiée à la place du commerçant ; aucune promesse de résultat, faux chiffre ou fausse urgence.

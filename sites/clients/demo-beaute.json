@@ -1,0 +1,28 @@
+{
+  "slug": "demo-beaute",
+  "secteur": "beaute",
+  "nom": "Atelier Léa",
+  "metier": "salon de coiffure",
+  "ville": "Bordeaux",
+  "zone": "",
+  "tel": "05 00 00 00 00",
+  "email": "contact@exemple.fr",
+  "adresse": "8 place de l'Exemple, 33000 Bordeaux",
+  "titre": [
+    "Votre coiffeuse,",
+    "à Bordeaux"
+  ],
+  "slogan": "Coiffure et soins sur rendez-vous, dans un cadre calme et chaleureux.",
+  "accroche": "Un salon à taille humaine où chaque coupe et chaque soin sont pensés pour vous, sans précipitation.",
+  "presentation": [
+    "Atelier Léa est une entreprise de salon de coiffure installée à Bordeaux.",
+    "Nous vous accueillons avec une priorité : un travail soigné, des prix clairs et un échange simple avec vous."
+  ],
+  "dirigeant": "Léa Durand",
+  "fonction": "coiffeuse et fondatrice",
+  "icone_logo": "scissors",
+  "cta": "Prendre rendez-vous",
+  "agence": "Stanislas Roux",
+  "annee": "2026",
+  "maquette": true
+}

@@ -1,0 +1,27 @@
+{
+  "slug": "demo-batiment",
+  "secteur": "batiment",
+  "nom": "Martin Plomberie",
+  "metier": "plombier chauffagiste",
+  "ville": "Lyon",
+  "zone": "agglomération lyonnaise",
+  "tel": "04 00 00 00 00",
+  "email": "contact@exemple.fr",
+  "adresse": "12 rue de l'Exemple, 69000 Lyon",
+  "titre": [
+    "Plombier chauffagiste",
+    "à Lyon"
+  ],
+  "slogan": "Dépannage, rénovation et entretien, avec un devis clair avant chaque intervention.",
+  "accroche": "Fuite, chaudière en panne ou salle de bain à refaire : un artisan local qui intervient vite et vous dit le prix avant de commencer.",
+  "presentation": [
+    "Martin Plomberie est une entreprise de plombier chauffagiste installée à Lyon.",
+    "Nous vous accueillons avec une priorité : un travail soigné, des prix clairs et un échange simple avec vous."
+  ],
+  "dirigeant": "Prénom Martin",
+  "fonction": "gérant",
+  "icone_logo": "drop",
+  "agence": "Stanislas Roux",
+  "annee": "2026",
+  "maquette": true
+}

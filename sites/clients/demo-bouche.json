@@ -1,0 +1,28 @@
+{
+  "slug": "demo-bouche",
+  "secteur": "bouche",
+  "nom": "Boulangerie du Marché",
+  "metier": "boulangerie pâtisserie",
+  "ville": "Nantes",
+  "zone": "",
+  "tel": "02 00 00 00 00",
+  "email": "contact@exemple.fr",
+  "adresse": "3 rue de l'Exemple, 44000 Nantes",
+  "titre": [
+    "Pain et pâtisseries",
+    "faits maison, à Nantes"
+  ],
+  "slogan": "Pains, pâtisseries et traiteur, préparés chaque jour sur place.",
+  "accroche": "Des fournées toute la journée, des gâteaux pour vos fêtes et un service traiteur pour vos réceptions.",
+  "presentation": [
+    "Boulangerie du Marché est une entreprise de boulangerie pâtisserie installée à Nantes.",
+    "Nous vous accueillons avec une priorité : un travail soigné, des prix clairs et un échange simple avec vous."
+  ],
+  "dirigeant": "Prénom Nom",
+  "fonction": "boulanger-pâtissier",
+  "icone_logo": "bread",
+  "cta": "Passer commande",
+  "agence": "Stanislas Roux",
+  "annee": "2026",
+  "maquette": true
+}
