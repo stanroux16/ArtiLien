@@ -3,7 +3,7 @@
 Usage : python3 build.py clients/<fichier>.json   (ou sans argument : tous les clients)
 Sortie : dist/<slug>/  (site statique prêt à déployer)
 """
-import json, sys, html, pathlib, shutil
+import json, sys, html, pathlib, shutil, re, subprocess, tempfile
 
 ROOT = pathlib.Path(__file__).parent
 E = html.escape
@@ -243,11 +243,93 @@ section.alt{background:var(--soft)}.steps li{border-radius:0;border-top:3px dott
 """,
 }
 
+
+# ---------- polices locales (aucune requête vers Google : RGPD, rendu identique partout, PDF fidèle) ----------
+FONT_WEIGHTS = {
+    "Barlow Condensed": [(500, "normal"), (600, "normal"), (700, "normal")],
+    "Barlow": [(400, "normal"), (500, "normal"), (600, "normal")],
+    "Cormorant Garamond": [(500, "normal"), (600, "normal"), (500, "italic")],
+    "Jost": [(400, "normal"), (500, "normal")],
+    "Fraunces": [(500, "normal"), (700, "normal")],
+    "DM Sans": [(400, "normal"), (500, "normal")],
+    "Archivo": [(500, "normal"), (700, "normal"), (800, "normal")],
+    "Archivo Narrow": [(500, "normal"), (600, "normal")],
+    "Playfair Display": [(600, "normal"), (700, "normal"), (600, "italic")],
+    "Source Sans 3": [(400, "normal"), (500, "normal"), (600, "normal")],
+    "Space Grotesk": [(500, "normal"), (700, "normal")],
+    "Inter": [(400, "normal"), (500, "normal"), (600, "normal")],
+}
+FONT_SETS = {  # choix « Police » de la brochure : A = police du secteur (défaut), B, C
+    "classique": {"label": "Classique et élégante", "h": "'Playfair Display', Georgia, serif", "b": "'Source Sans 3', system-ui, sans-serif"},
+    "moderne": {"label": "Moderne et nette", "h": "'Space Grotesk', system-ui, sans-serif", "b": "'Inter', system-ui, sans-serif"},
+}
+FONTS_DIR = ROOT / "fonts"
+
+def families_of(*stacks):
+    out = []
+    for st in stacks:
+        m = re.match(r"\s*'([^']+)'", st or "")
+        if m and m.group(1) in FONT_WEIGHTS and m.group(1) not in out:
+            out.append(m.group(1))
+    return out
+
+def font_faces(families, used):
+    css = []
+    for fam in families:
+        slug = fam.lower().replace(" ", "-")
+        for w, st in FONT_WEIGHTS[fam]:
+            fn = f"{slug}-latin-{w}-{st}.woff2"
+            used.add(fn)
+            css.append(f"@font-face{{font-family:'{fam}';font-weight:{w};font-style:{st};font-display:swap;src:url(fonts/{fn}) format('woff2')}}")
+    return "".join(css)
+
+def theme_for(p, t):
+    fs = FONT_SETS.get(p.get("police"))
+    return {**t, "h": fs["h"], "b": fs["b"]} if fs else t
+
+# ---------- logos (texte seul, pas de dessin inventé) ----------
+LOGOS = {
+    "icone": "Pictogramme du métier + nom (version actuelle)",
+    "capitales": "Nom en capitales espacées",
+    "souligne": "Nom souligné d’un trait de couleur",
+    "deux-lignes": "Nom + métier et ville en petit",
+    "point": "Nom suivi d’un point de couleur",
+    "encadre": "Nom dans un cadre (style tampon)",
+    "serif": "Nom en italique élégant",
+}
+
+def logo_inner(p, style, size=20):
+    nom = E(p["nom"])
+    if style == "icone":
+        return f'<span class="mark">{icon(p.get("icone_logo") or THEMES[p["secteur"]]["default_services"][0][0], size)}</span>{nom}'
+    if style == "deux-lignes":
+        return f'<span class="lgt">{nom}</span><span class="lgs">{E(p["metier"])} · {E(p["ville"])}</span>'
+    if style == "point":
+        return f'<span class="lgt">{nom}<i class="dot"></i></span>'
+    return f'<span class="lgt">{nom}</span>'
+
+def logo_link(p, style, href="index.html"):
+    return f'<a class="logo lg-{style}" href="{href}">{logo_inner(p, style)}</a>'
+
+LOGO_CSS = """
+.logo.lg-capitales .lgt{text-transform:uppercase;letter-spacing:.2em;font-size:1.1rem;font-weight:600}
+.logo.lg-souligne .lgt{border-bottom:4px solid var(--acc);padding-bottom:2px}
+.logo.lg-deux-lignes{flex-direction:column;align-items:flex-start;gap:2px;line-height:1.05}
+.logo.lg-deux-lignes .lgs{font-family:var(--b);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;font-weight:500;opacity:.7}
+.logo .dot{display:inline-block;width:.3em;height:.3em;border-radius:50%;background:var(--acc);margin-left:.1em}
+.logo.lg-encadre .lgt{border:2.5px solid var(--acc);padding:3px 12px;letter-spacing:.03em}
+.logo.lg-serif .lgt{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-weight:600}
+"""
+
 # ---------- gabarits de page ----------
-def page_shell(p, t, pal, titre, body, active):
+USED_FONTS = set()
+
+def page_shell(p, t, pal, titre, body, active, extra_families=(), extra_css=""):
     nom = E(p["nom"])
     desc = E(p.get("description_seo") or f'{p["nom"]} – {p["metier"]} à {p["ville"]}. Devis, horaires et contact.')
-    fonts = f'<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family={t["fonts"]}&display=swap" rel="stylesheet">'
+    lstyle = p.get("logo", "icone")
+    fams = families_of(t["h"], t["b"]) + [f for f in (list(extra_families) + (["Playfair Display"] if lstyle == "serif" else [])) if f not in families_of(t["h"], t["b"])]
+    fonts = f"<style>{font_faces(fams, USED_FONTS)}</style>"
     css_vars = ":root{" + "".join(f"--{k}:{v};" for k, v in pal.items()) + f"--h:{t['h']};--b:{t['b']}" + "}"
     def nav_item(href, label, key):
         cur = ' aria-current="page"' if key == active else ""
@@ -259,9 +341,9 @@ def page_shell(p, t, pal, titre, body, active):
         ribbon = f'<div class="ribbon"><b>Maquette</b> proposée à {nom} par {E(p.get("agence", "votre agence web"))} — textes et visuels provisoires, tout est modifiable.</div>'
     return f"""<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{E(titre)} – {nom}</title><meta name="description" content="{desc}">{'<meta name="robots" content="noindex,nofollow">' if p.get("maquette", True) else ''}
-{fonts}<style>{css_vars}{BASE_CSS}{EXTRA_CSS[p["secteur"]]}</style></head><body>
+{fonts}<style>{css_vars}{BASE_CSS}{LOGO_CSS}{EXTRA_CSS[p["secteur"]]}{extra_css}</style></head><body>
 {ribbon}
-<header class="top"><div class="wrap bar"><a class="logo" href="index.html"><span class="mark">{icon(p.get("icone_logo", t["default_services"][0][0]), 20)}</span>{nom}</a>
+<header class="top"><div class="wrap bar">{logo_link(p, lstyle)}
 <nav><button class="burger" onclick="document.getElementById('m').classList.toggle('open')" aria-label="Menu">Menu</button><ul id="m">{nav}<li><a class="btn" href="contact.html">{E(p.get("cta", "Demander un devis"))}</a></li></ul></nav></div></header>
 {body}
 <footer><div class="wrap"><div class="cols"><div><h4>{nom}</h4><p>{E(p["slogan"])}</p><p style="margin-top:10px">{E(p["ville"])}{(' · ' + E(p['zone'])) if p.get('zone') else ''}</p></div>
@@ -351,21 +433,138 @@ def build_privacy(p, t, pal):
 <h2>Cookies</h2><p>{todo("À adapter : ce site n’utilise aucun cookie de suivi par défaut. Si un outil de mesure d’audience ou une carte est ajouté, un bandeau de consentement sera nécessaire.")}</p></div></section>"""
     return page_shell(p, t, pal, "Politique de confidentialité", body, "")
 
+
+# ---------- brochure de personnalisation (page + PDF) ----------
+CHOIX_CSS = """
+.ch-intro{padding:56px 0 20px}.ch-intro h1{font-size:clamp(2.2rem,5vw,3.6rem);margin-bottom:14px}.ch-intro p{max-width:46em;font-size:1.1rem;opacity:.88}
+.ch-how{background:var(--dark);color:#f4f1ea;padding:18px 22px;margin-top:24px;max-width:46em;font-size:1rem}.ch-how b{color:#fff}
+.ch-sec{padding:44px 0 8px}.ch-sec h2{font-size:clamp(1.7rem,3.4vw,2.4rem);margin-bottom:6px}.ch-sec>.wrap>p.sub{opacity:.8;margin-bottom:22px;max-width:48em}
+.ch-num{display:inline-grid;place-items:center;width:38px;height:38px;background:var(--acc);color:#fff;font-family:var(--h);font-weight:700;margin-right:10px;font-size:1.2rem;vertical-align:middle}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.opt{border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);background:#fff;padding:0;overflow:hidden;break-inside:avoid;color:#1d2430}
+.opt .tag{display:flex;align-items:center;gap:10px;padding:10px 14px;font-weight:600;font-size:.95rem;border-bottom:1px solid #0001;background:#faf9f6;font-family:system-ui,sans-serif}
+.opt .tag i{font-style:normal;display:inline-grid;place-items:center;width:26px;height:26px;background:#1d2430;color:#fff;font-weight:700;font-size:.85rem}
+.opt .body{padding:16px 14px;font-size:.95rem;line-height:1.5}
+.pal{padding:16px}.pal .sw{display:flex;gap:6px;margin-top:12px}.pal .sw span{width:28px;height:28px;border-radius:50%;border:1px solid #0002}
+.pal .mini{padding:14px;border-radius:2px}.pal .mini b{display:block;font-size:1.05rem;margin-bottom:6px}.pal .mini u{display:inline-block;text-decoration:none;padding:6px 12px;color:#fff;font-size:.8rem;font-weight:600}
+.fnt .big{font-size:1.9rem;line-height:1.1;margin-bottom:8px}.fnt .txt{font-size:.98rem}
+.lgbox{padding:22px 14px;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink)}
+.lgbox.dark{background:var(--dark);color:#fff}.lgbox .logo{pointer-events:none}
+.tone q{display:block;font-family:var(--h);font-size:1.25rem;line-height:1.25;quotes:none}
+.lst{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 24px;list-style:none;padding:0}
+.lst li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #0001}.lst .ico{color:var(--acc);flex:none;margin-top:2px}
+.lst small{display:block;opacity:.7;font-size:.86rem}
+.incl{background:var(--soft);padding:22px 26px;break-inside:avoid}.incl ul{padding-left:20px}.incl li{margin:4px 0}
+.dl{display:inline-block;margin-top:20px}
+@media print{@page{size:A4;margin:11mm}body{font-size:14px}header.top{position:static;backdrop-filter:none}nav,.dl,.burger{display:none!important}
+.ch-sec{padding:14px 0 2px;break-inside:avoid}.ch-sec.long{break-inside:auto}.ch-sec h2{break-after:avoid}.ch-intro{padding:14px 0 4px}footer{display:none}.ribbon{font-size:11px}.opts{gap:10px;grid-template-columns:repeat(3,1fr)}.lst{grid-template-columns:repeat(2,1fr)}.opt .body{padding:10px 12px;font-size:.88rem}.fnt .big{font-size:1.5rem}.ch-sec>.wrap>p.sub{margin-bottom:10px}
+.opt,.lgbox{-webkit-print-color-adjust:exact;print-color-adjust:exact}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+"""
+
+TONES = [
+    ("Convivial et proche", "Bienvenue chez {nom} ! {metier} à {ville} : on prend le temps de vous écouter et de bien faire les choses."),
+    ("Sérieux et rassurant", "{nom}, {metier} à {ville} : un travail soigné, des prix clairs et un interlocuteur qui répond."),
+    ("Haut de gamme et sobre", "{nom} — {metier} à {ville}. Savoir-faire, qualité et attention aux détails."),
+]
+EXTRA_SECTIONS = {
+    "batiment": [("shield", "Assurances et qualifications", "à afficher si vous en avez (décennale, RGE…)"), ("pin", "Zones d’intervention", "liste des villes ou carte")],
+    "beaute": [("sparkle", "Tarifs des prestations", "liste claire, par catégorie"), ("clock", "Réservation en ligne", "bouton vers votre outil de rendez-vous existant")],
+    "bouche": [("basket", "Carte et produits du jour", "mise à jour sur simple mail"), ("cake", "Commandes spéciales", "formulaire pour gâteaux, plateaux, événements")],
+    "auto": [("car", "Marques et services", "ce que vous réparez ou entretenez"), ("clock", "Prise de rendez-vous atelier", "formulaire dédié")],
+}
+COMMON_SECTIONS = [
+    ("brush", "Galerie de réalisations", "vos photos, présentées en grille"),
+    ("hand", "Avis clients", "témoignages réels, avec leur accord"),
+    ("clock", "Tarifs / devis type", "fourchettes de prix ou formules"),
+    ("mail", "FAQ", "les questions que vos clients posent le plus"),
+    ("pin", "Plan d’accès", "adresse, parking, accès"),
+    ("phone", "Boutons d’appel et WhatsApp", "un clic pour vous joindre depuis un mobile"),
+    ("leaf", "Réseaux sociaux", "liens vers vos pages Facebook, Instagram"),
+    ("home", "Actualités et promotions", "une courte rubrique que vous alimentez par mail"),
+]
+
+def build_choix(p, t, pal, has_pdf=False):
+    nom = E(p["nom"]); sect = p["secteur"]
+    pal_items = list(t["palettes"].items())
+    L = "ABC"
+    pals = ""
+    for i, (key, c) in enumerate(pal_items[:3]):
+        pals += (f'<div class="opt"><div class="tag"><i>{L[i]}</i>Ambiance {E(key)}</div><div class="pal">'
+                 f'<div class="mini" style="background:{c["bg"]};color:{c["ink"]}"><b style="font-family:var(--h)">{nom}</b>'
+                 f'<span style="font-size:.85rem">{E(p["metier"].capitalize())} à {E(p["ville"])}</span><br><br><u style="background:{c["acc"]}">{E(p.get("cta", "Demander un devis"))}</u></div>'
+                 f'<div class="sw">' + "".join(f'<span style="background:{c[k]}"></span>' for k in ("bg", "soft", "acc", "acc2", "ink")) + '</div></div></div>')
+    sets = [("A", "Police du secteur (actuelle)", t["h"], t["b"])]
+    for i, (k, fs) in enumerate(FONT_SETS.items()):
+        sets.append((L[i + 1], fs["label"], fs["h"], fs["b"]))
+    fonts = "".join(f'<div class="opt fnt"><div class="tag"><i>{c}</i>{E(lab)}</div><div class="body"><div class="big" style="font-family:{h}">{nom}</div>'
+                    f'<div class="txt" style="font-family:{b}">{E(p["accroche"])}</div></div></div>' for c, lab, h, b in sets)
+    logos = ""
+    for i, (k, lab) in enumerate(LOGOS.items(), 1):
+        logos += (f'<div class="opt"><div class="tag"><i>{i}</i>{E(lab)}</div><div class="lgbox">{logo_link(p, k, "#")}</div>'
+                  f'<div class="lgbox dark">{logo_link(p, k, "#")}</div></div>')
+    tones = "".join(f'<div class="opt tone"><div class="tag"><i>{L[i]}</i>{E(lab)}</div><div class="body"><q>{E(tx.format(nom=p["nom"], metier=p["metier"], ville=p["ville"]))}</q></div></div>' for i, (lab, tx) in enumerate(TONES))
+    photos = "".join(f'<div class="opt"><div class="tag"><i>{c}</i>{E(a)}</div><div class="body">{E(b)}</div></div>' for c, a, b in [
+        ("A", "Vos photos", "Équipe, devanture, réalisations : vous nous envoyez 5 à 15 photos, nous les mettons en page."),
+        ("B", "Visuels génériques", "Illustrations du métier, sans photo. Vous pourrez ajouter les vôtres plus tard."),
+        ("C", "Un mélange", "Vos meilleures photos aux endroits clés, illustrations ailleurs.")])
+    secs = COMMON_SECTIONS + EXTRA_SECTIONS.get(sect, [])
+    lst = "".join(f'<li>{icon(i, 22)}<div><b>{E(a)}</b><small>{E(b)}</small></div></li>' for i, a, b in secs)
+    infos = ["Vos services à mettre en avant (4 à 6, une phrase chacun)", "Votre adresse, zone d’intervention, horaires", "Téléphone et e-mail à afficher",
+             "Vos informations légales (forme juridique, SIRET, assurance, médiateur si vous vendez à des particuliers)", "Un site que vous aimez (facultatif)"]
+    infl = "".join(f"<li>{E(x)}</li>" for x in infos)
+    prix = ""
+    if p.get("prix_install") and p.get("prix_abo"):
+        prix = f'<p><b>{E(str(p["prix_install"]))} € une seule fois</b>, puis <b>{E(str(p["prix_abo"]))} €/mois</b>, sans engagement de durée.</p>'
+    dl = '<a class="btn ghost dl" href="personnalisation.pdf">Télécharger cette brochure en PDF</a>' if has_pdf else ""
+    contact = E(p.get("contact_agence", "artilien.contact@gmail.com"))
+    body = f"""
+<section class="ch-intro"><div class="wrap"><span class="kicker">Personnalisation</span><h1>Votre site, à l’image de {nom}</h1>
+<p>Voici tout ce que nous pouvons ajuster. Rien n’est définitif : vous choisissez, nous modifions, et vous pouvez encore changer après la mise en ligne.</p>
+<div class="ch-how"><b>Comment répondre ?</b> Par mail à {contact}, en donnant simplement vos codes. Exemple : « Couleurs B – Police A – Logo 3 – Ton C – Photos A ». Vous pouvez aussi écrire « je ne sais pas, conseillez-moi ».</div>{dl}</div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">1</span>Couleurs</h2><p class="sub">Trois ambiances pensées pour votre métier. La maquette utilise actuellement l’ambiance {E(p.get("palette", t["defaut_palette"]))}.</p><div class="opts">{pals}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">2</span>Polices de caractères</h2><p class="sub">Le style des titres et des textes.</p><div class="opts">{fonts}</div></div></section>
+<section class="ch-sec long"><div class="wrap"><h2><span class="ch-num">3</span>Logo</h2><p class="sub">Sept présentations de votre nom, sur fond clair et sur fond foncé. Si vous avez déjà un logo, envoyez-le : nous l’utiliserons à la place.</p><div class="opts">{logos}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">4</span>Ton des textes</h2><p class="sub">La façon dont le site parle de vous. Nous réécrivons tous les textes dans le ton choisi.</p><div class="opts">{tones}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">5</span>Photos</h2><div class="opts">{photos}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">6</span>Sections et fonctions en plus</h2><p class="sub">Dites-nous celles qui vous intéressent.</p><ul class="lst">{lst}</ul></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">7</span>Ce que nous vous demanderons</h2><ul style="padding-left:20px;line-height:1.9">{infl}</ul></div></section>
+<section class="ch-sec" style="padding-bottom:50px"><div class="wrap"><div class="incl"><b>Inclus dans l’offre</b>{prix}<ul><li>Création et mise en ligne de votre site (accueil, présentation, contact avec formulaire, mentions légales, politique de confidentialité)</li><li>Hébergement, nom de domaine et certificat de sécurité (HTTPS)</li><li>Une modification par mois sur simple mail</li><li>Vous restez propriétaire de vos contenus, résiliation par mail à tout moment</li></ul></div></div></section>"""
+    return page_shell(p, t, pal, "Personnalisation", body, "", extra_families=["Playfair Display", "Source Sans 3", "Space Grotesk", "Inter"] + families_of(t["h"], t["b"]), extra_css=CHOIX_CSS)
+
+CHROME = shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")
+
+def make_pdf(out):
+    """Rend personnalisation.html en PDF (Chrome sans interface). Retourne True si réussi."""
+    if not CHROME:
+        return False
+    pdf = out / "personnalisation.pdf"
+    r = subprocess.run([CHROME, "--headless=new", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
+                        f"--print-to-pdf={pdf}", (out / "personnalisation.html").as_uri()], capture_output=True, timeout=120)
+    return pdf.exists() and pdf.stat().st_size > 1000
+
 def build_site(path):
     p = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
-    t = THEMES[p["secteur"]]
+    t = theme_for(p, THEMES[p["secteur"]])
     pal = t["palettes"][p.get("palette", t["defaut_palette"])]
     out = ROOT / "dist" / p["slug"]
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
+    USED_FONTS.clear()
     pages = {"index.html": build_home, "presentation.html": build_pres, "contact.html": build_contact,
              "mentions-legales.html": build_mentions, "politique-confidentialite.html": build_privacy}
     for name, fn in pages.items():
         (out / name).write_text(fn(p, t, pal), encoding="utf-8")
+    (out / "personnalisation.html").write_text(build_choix(p, t, pal, has_pdf=bool(CHROME)), encoding="utf-8")
+    (out / "fonts").mkdir()
+    for fn in sorted(USED_FONTS):
+        shutil.copy(FONTS_DIR / fn, out / "fonts" / fn)
+    pdf_ok = make_pdf(out)
+    if CHROME and not pdf_ok:
+        (out / "personnalisation.html").write_text(build_choix(p, t, pal, has_pdf=False), encoding="utf-8")
     if p.get("maquette", True):
         (out / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
-    print("OK", out)
+    print("OK", out, "(PDF)" if pdf_ok else "(sans PDF)")
 
 if __name__ == "__main__":
     files = sys.argv[1:] or sorted(str(f) for f in (ROOT / "clients").glob("*.json"))

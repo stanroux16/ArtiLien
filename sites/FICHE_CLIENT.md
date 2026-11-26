@@ -2,6 +2,8 @@
 
 Répondez simplement par mail, en reprenant les numéros. Tout reste modifiable après.
 
+**Brochure de personnalisation** (couleurs, polices, 7 logos, tons, photos, sections en plus) : page `https://<DOMAINE>/m/<slug>/personnalisation.html` + PDF joint. Réponse type : « Couleurs B – Police A – Logo 3 – Ton C – Photos A ».
+
 **1. Couleurs** (3 ambiances, voir la maquette) : A / B / C
 **2. Ton des textes** : A convivial et proche · B sérieux et rassurant · C haut de gamme et sobre
 **3. Photos** : j'envoie mes photos / je n'en ai pas (on utilise des visuels génériques provisoires)
@@ -19,7 +21,9 @@ Répondez simplement par mail, en reprenant les numéros. Tout reste modifiable 
 
 | N° | Champ du fichier client JSON |
 |----|------------------------------|
-| 1 | `palette` (valeurs possibles par secteur dans build.py) |
+| 1 | `palette` (A/B/C = ordre des palettes du secteur dans `THEMES`) |
+| 1bis | `police` (A = absent, B = `classique`, C = `moderne`) |
+| 11bis | `logo` (1 `icone`, 2 `capitales`, 3 `souligne`, 4 `deux-lignes`, 5 `point`, 6 `encadre`, 7 `serif`) |
 | 2 | `ton` (à utiliser pour réécrire `accroche` et `presentation`) |
 | 3 | `photos` |
 | 4 | domaine choisi |
