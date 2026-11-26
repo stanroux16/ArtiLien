@@ -484,32 +484,41 @@ COMMON_SECTIONS = [
     ("home", "Actualités et promotions", "une courte rubrique que vous alimentez par mail"),
 ]
 
-def build_choix(p, t, pal, has_pdf=False):
-    nom = E(p["nom"]); sect = p["secteur"]
-    pal_items = list(t["palettes"].items())
-    L = "ABC"
+def _choix_parts(p, t, pal, form=False):
+    """Blocs de choix (couleurs, polices, logos, tons, photos, sections). form=True : cases à cocher/boutons radio."""
+    nom = E(p["nom"]); sect = p["secteur"]; L = "ABC"
+    def opt(name, code, label, inner, cls="", tagfn=None):
+        if not form:
+            return f'<div class="opt {cls}"><div class="tag"><i>{code}</i>{label}</div>{inner}</div>'
+        return (f'<label class="opt pick {cls}"><input type="radio" name="{name}" value="{code}" required>'
+                f'<div class="tag"><i>{code}</i>{label}<span class="chk">✓ Choisi</span></div>{inner}</label>')
     pals = ""
-    for i, (key, c) in enumerate(pal_items[:3]):
-        pals += (f'<div class="opt"><div class="tag"><i>{L[i]}</i>Ambiance {E(PAL_LABELS.get(key, key))}</div><div class="pal">'
-                 f'<div class="mini" style="background:{c["bg"]};color:{c["ink"]}"><b style="font-family:var(--h)">{nom}</b>'
+    for i, (key, c) in enumerate(list(t["palettes"].items())[:3]):
+        inner = (f'<div class="pal"><div class="mini" style="background:{c["bg"]};color:{c["ink"]}"><b style="font-family:var(--h)">{nom}</b>'
                  f'<span style="font-size:.85rem">{E(p["metier"].capitalize())} à {E(p["ville"])}</span><br><br><u style="background:{c["acc"]}">{E(p.get("cta", "Demander un devis"))}</u></div>'
-                 f'<div class="sw">' + "".join(f'<span style="background:{c[k]}"></span>' for k in ("bg", "soft", "acc", "acc2", "ink")) + '</div></div></div>')
+                 f'<div class="sw">' + "".join(f'<span style="background:{c[k]}"></span>' for k in ("bg", "soft", "acc", "acc2", "ink")) + '</div></div>')
+        pals += opt("palette", L[i], f'Ambiance {E(PAL_LABELS.get(key, key))}', inner)
     sets = [("A", "Police du secteur (actuelle)", t["h"], t["b"])]
     for i, (k, fs) in enumerate(FONT_SETS.items()):
         sets.append((L[i + 1], fs["label"], fs["h"], fs["b"]))
-    fonts = "".join(f'<div class="opt fnt"><div class="tag"><i>{c}</i>{E(lab)}</div><div class="body"><div class="big" style="font-family:{h}">{nom}</div>'
-                    f'<div class="txt" style="font-family:{b}">{E(p["accroche"])}</div></div></div>' for c, lab, h, b in sets)
+    fonts = "".join(opt("police", c, E(lab), f'<div class="body"><div class="big" style="font-family:{h}">{nom}</div><div class="txt" style="font-family:{b}">{E(p["accroche"])}</div></div>', "fnt") for c, lab, h, b in sets)
     logos = ""
     for i, (k, lab) in enumerate(LOGOS.items(), 1):
-        logos += (f'<div class="opt"><div class="tag"><i>{i}</i>{E(lab)}</div><div class="lgbox">{logo_link(p, k, "#")}</div>'
-                  f'<div class="lgbox dark">{logo_link(p, k, "#")}</div></div>')
-    tones = "".join(f'<div class="opt tone"><div class="tag"><i>{L[i]}</i>{E(lab)}</div><div class="body"><q>{E(tx.format(nom=p["nom"], metier=p["metier"], Metier=p["metier"].capitalize(), ville=p["ville"]))}</q></div></div>' for i, (lab, tx) in enumerate(TONES))
-    photos = "".join(f'<div class="opt"><div class="tag"><i>{c}</i>{E(a)}</div><div class="body">{E(b)}</div></div>' for c, a, b in [
+        logos += opt("logo", str(i), E(lab), f'<div class="lgbox">{logo_link(p, k, "#")}</div><div class="lgbox dark">{logo_link(p, k, "#")}</div>')
+    tones = "".join(opt("ton", L[i], E(lab), f'<div class="body"><q>{E(tx.format(nom=p["nom"], metier=p["metier"], Metier=p["metier"].capitalize(), ville=p["ville"]))}</q></div>', "tone") for i, (lab, tx) in enumerate(TONES))
+    photos = "".join(opt("photos", c, E(a), f'<div class="body">{E(b)}</div>') for c, a, b in [
         ("A", "Vos photos", "Équipe, devanture, réalisations : vous nous envoyez 5 à 15 photos, nous les mettons en page."),
         ("B", "Visuels génériques", "Illustrations du métier, sans photo. Vous pourrez ajouter les vôtres plus tard."),
         ("C", "Un mélange", "Vos meilleures photos aux endroits clés, illustrations ailleurs.")])
     secs = COMMON_SECTIONS + EXTRA_SECTIONS.get(sect, [])
-    lst = "".join(f'<li>{icon(i, 22)}<div><b>{E(a)}</b><small>{E(b)}</small></div></li>' for i, a, b in secs)
+    if form:
+        lst = "".join(f'<li><label class="cb"><input type="checkbox" name="sections[]" value="{E(a)}">{icon(i, 22)}<div><b>{E(a)}</b><small>{E(b)}</small></div></label></li>' for i, a, b in secs)
+    else:
+        lst = "".join(f'<li>{icon(i, 22)}<div><b>{E(a)}</b><small>{E(b)}</small></div></li>' for i, a, b in secs)
+    return dict(pals=pals, fonts=fonts, logos=logos, tones=tones, photos=photos, lst=lst, nom=nom)
+
+def build_choix(p, t, pal, has_pdf=False):
+    P = _choix_parts(p, t, pal, False); nom = P["nom"]
     infos = ["Vos services à mettre en avant (4 à 6, une phrase chacun)", "Votre adresse, zone d’intervention, horaires", "Téléphone et e-mail à afficher",
              "Vos informations légales (forme juridique, SIRET, assurance, médiateur si vous vendez à des particuliers)", "Un site que vous aimez (facultatif)"]
     infl = "".join(f"<li>{E(x)}</li>" for x in infos)
@@ -522,15 +531,114 @@ def build_choix(p, t, pal, has_pdf=False):
 <section class="ch-intro"><div class="wrap"><span class="kicker">Personnalisation</span><h1>Votre site, à l’image de {nom}</h1>
 <p>Voici tout ce que nous pouvons ajuster. Rien n’est définitif : vous choisissez, nous modifions, et vous pouvez encore changer après la mise en ligne.</p>
 <div class="ch-how"><b>Comment répondre ?</b> Par mail à {contact}, en donnant simplement vos codes. Exemple : « Couleurs B – Police A – Logo 3 – Ton C – Photos A ». Vous pouvez aussi écrire « je ne sais pas, conseillez-moi ».</div>{dl}</div></section>
-<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">1</span>Couleurs</h2><p class="sub">Trois ambiances pensées pour votre métier. La maquette utilise actuellement l’ambiance {E(PAL_LABELS.get(p.get("palette", t["defaut_palette"]), p.get("palette", t["defaut_palette"])))}.</p><div class="opts">{pals}</div></div></section>
-<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">2</span>Polices de caractères</h2><p class="sub">Le style des titres et des textes.</p><div class="opts">{fonts}</div></div></section>
-<section class="ch-sec long"><div class="wrap"><h2><span class="ch-num">3</span>Logo</h2><p class="sub">Sept présentations de votre nom, sur fond clair et sur fond foncé. Si vous avez déjà un logo, envoyez-le : nous l’utiliserons à la place.</p><div class="opts">{logos}</div></div></section>
-<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">4</span>Ton des textes</h2><p class="sub">La façon dont le site parle de vous. Nous réécrivons tous les textes dans le ton choisi.</p><div class="opts">{tones}</div></div></section>
-<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">5</span>Photos</h2><div class="opts">{photos}</div></div></section>
-<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">6</span>Sections et fonctions en plus</h2><p class="sub">Dites-nous celles qui vous intéressent.</p><ul class="lst">{lst}</ul></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">1</span>Couleurs</h2><p class="sub">Trois ambiances pensées pour votre métier. La maquette utilise actuellement l’ambiance {E(PAL_LABELS.get(p.get("palette", t["defaut_palette"]), p.get("palette", t["defaut_palette"])))}.</p><div class="opts">{P["pals"]}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">2</span>Polices de caractères</h2><p class="sub">Le style des titres et des textes.</p><div class="opts">{P["fonts"]}</div></div></section>
+<section class="ch-sec long"><div class="wrap"><h2><span class="ch-num">3</span>Logo</h2><p class="sub">Sept présentations de votre nom, sur fond clair et sur fond foncé. Si vous avez déjà un logo, envoyez-le : nous l’utiliserons à la place.</p><div class="opts">{P["logos"]}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">4</span>Ton des textes</h2><p class="sub">La façon dont le site parle de vous. Nous réécrivons tous les textes dans le ton choisi.</p><div class="opts">{P["tones"]}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">5</span>Photos</h2><div class="opts">{P["photos"]}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">6</span>Sections et fonctions en plus</h2><p class="sub">Dites-nous celles qui vous intéressent.</p><ul class="lst">{P["lst"]}</ul></div></section>
 <section class="ch-sec"><div class="wrap"><h2><span class="ch-num">7</span>Ce que nous vous demanderons</h2><ul style="padding-left:20px;line-height:1.9">{infl}</ul></div></section>
 <section class="ch-sec" style="padding-bottom:50px"><div class="wrap"><div class="incl"><b>Inclus dans l’offre</b>{prix}<ul><li>Création et mise en ligne de votre site (accueil, présentation, contact avec formulaire, mentions légales, politique de confidentialité)</li><li>Hébergement, nom de domaine et certificat de sécurité (HTTPS)</li><li>Une modification par mois sur simple mail</li><li>Vous restez propriétaire de vos contenus, résiliation par mail à tout moment</li></ul></div></div></section>"""
     return page_shell(p, t, pal, "Personnalisation", body, "", extra_families=["Playfair Display", "Source Sans 3", "Space Grotesk", "Inter"] + families_of(t["h"], t["b"]), extra_css=CHOIX_CSS)
+
+COMMANDE_CSS = """
+.pick{cursor:pointer;position:relative;transition:box-shadow .15s,border-color .15s}.pick input{position:absolute;opacity:0;pointer-events:none}
+.pick .chk{display:none;margin-left:auto;font-size:.8rem;color:#fff;background:var(--acc);padding:2px 8px}
+.pick:hover{box-shadow:0 8px 22px -14px rgba(0,0,0,.5)}
+.pick:has(input:checked){border:2px solid var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 25%,transparent)}.pick:has(input:checked) .chk{display:inline-block}
+.pick:has(input:focus-visible){outline:3px solid var(--acc);outline-offset:2px}
+.cb{display:flex;gap:10px;align-items:flex-start;cursor:pointer;padding:8px 0;width:100%}.cb input{width:auto;margin-top:5px;accent-color:var(--acc);flex:none}
+.fm{display:grid;gap:16px;max-width:760px}.fm label.l{font-weight:600;font-size:.95rem;display:block;margin-bottom:6px}.fm small.h{display:block;opacity:.7;font-weight:400}
+.fm input[type=text],.fm input[type=email],.fm input[type=tel],.fm textarea{background:#fff;color:#1d2430;border:1.5px solid #8b93a1}
+.doms{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:10px}.dom{overflow-wrap:anywhere}
+.dom{display:flex;align-items:center;gap:10px;background:#fff;color:#1d2430;border:1.5px solid #c9ced6;padding:12px 14px;cursor:pointer;font-weight:700;border-radius:4px}
+.dom input{width:auto;accent-color:var(--acc)}.dom:has(input:checked){border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 25%,transparent)}
+.panel{background:var(--soft);padding:26px;border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);max-width:760px}
+.msg{padding:14px 16px;font-weight:600;margin-top:14px;display:none}.msg.ok{display:block;background:#e3f4e7;color:#14532d;border:1px solid #86c99a}.msg.err{display:block;background:#fde8e8;color:#7f1d1d;border:1px solid #e49a9a}
+#paiement{display:none}#checkout{min-height:300px;margin-top:14px;background:#fff;border-radius:6px;padding:6px}
+.price{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 4px}.price div{background:var(--bg);border:1px solid color-mix(in srgb,var(--ink) 18%,transparent);padding:14px 18px;flex:1;min-width:200px;color:var(--ink)}.price b{display:block;font-family:var(--h);font-size:1.9rem;line-height:1.1}
+.steps2{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 0;padding:0;list-style:none}.steps2 li{background:var(--dark);color:#f4f1ea;padding:8px 14px;font-size:.92rem}
+"""
+
+def build_commande(p, t, pal):
+    P = _choix_parts(p, t, pal, True); nom = P["nom"]
+    pi, pa = p.get("prix_install", 190), p.get("prix_abo", 29)
+    ref = ""
+    js = """
+<script>
+(function(){
+ var q=new URLSearchParams(location.search), ref=(q.get('r')||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,40);
+ var slug=location.pathname.split('/').filter(Boolean).slice(-2,-1)[0]||'';
+ var t0=Math.floor(Date.now()/1000);
+ var doms=(q.get('d')||'').split(',').map(function(x){return x.trim().toLowerCase()}).filter(function(x){return /^[a-z0-9.-]+\\.[a-z]{2,}$/.test(x)}).slice(0,15);
+ var box=document.getElementById('doms');
+ doms.forEach(function(d){var l=document.createElement('label');l.className='dom';var i=document.createElement('input');i.type='radio';i.name='domaine';i.value=d;l.appendChild(i);l.appendChild(document.createTextNode(d));box.insertBefore(l,box.lastElementChild)});
+ if(!doms.length){document.getElementById('domnote').textContent='Indiquez le nom de domaine souhaité ci-dessous : nous vérifions sa disponibilité avant de continuer.'}
+ var f=document.getElementById('fm'), msg=document.getElementById('msg'), btn=document.getElementById('send');
+ f.addEventListener('submit',function(e){e.preventDefault();
+  var fd=new FormData(f);fd.append('slug',slug);fd.append('ref',ref);fd.append('t0',t0);fd.append('commerce',document.body.getAttribute('data-nom')||'');
+  btn.disabled=true;btn.textContent='Envoi en cours…';msg.className='msg';
+  fetch('/api/choix.php',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(j){
+   if(j.ok){msg.className='msg ok';msg.textContent='Merci, vos choix sont enregistrés. Vous pouvez maintenant régler pour lancer la mise en ligne.';
+     document.getElementById('paiement').style.display='block';document.getElementById('paiement').scrollIntoView({behavior:'smooth'});btn.textContent='Choix enregistrés ✓';
+     try{sessionStorage.setItem('email',fd.get('email'))}catch(x){}}
+   else{btn.disabled=false;btn.textContent='Enregistrer mes choix';msg.className='msg err';msg.textContent=({email_invalide:'Merci de vérifier votre adresse e-mail.',consentement:'Merci de cocher la case de consentement.',trop_rapide:'Un instant, puis réessayez.',trop_de_demandes:'Trop de tentatives, réessayez plus tard.'})[j.error]||'Un problème est survenu : écrivez-nous à artilien.contact@gmail.com.'}
+  }).catch(function(){btn.disabled=false;btn.textContent='Enregistrer mes choix';msg.className='msg err';msg.textContent='Connexion impossible : écrivez-nous à artilien.contact@gmail.com.'})});
+ var pay=document.getElementById('paybtn'), started=false;
+ pay.addEventListener('click',function(){ if(started)return; started=true; pay.disabled=true; pay.textContent='Chargement du paiement sécurisé…';
+  var s=document.createElement('script');s.src='https://js.stripe.com/v3/';s.onload=function(){
+   var em='';try{em=sessionStorage.getItem('email')||''}catch(x){}
+   fetch('/api/checkout.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:slug,ref:ref,email:em})}).then(function(r){return r.json()}).then(function(j){
+    if(!j.ok){throw new Error(j.error||'x')}
+    var stripe=Stripe(j.publishableKey,{locale:'fr'});
+    return stripe.initEmbeddedCheckout({fetchClientSecret:function(){return Promise.resolve(j.clientSecret)}}).then(function(c){c.mount('#checkout');pay.style.display='none'})
+   }).catch(function(){started=false;pay.disabled=false;pay.textContent='Payer en ligne';var m=document.getElementById('paymsg');m.className='msg err';m.textContent='Le paiement en ligne est momentanément indisponible. Écrivez-nous à artilien.contact@gmail.com et nous vous envoyons un lien de paiement.'})};
+  s.onerror=function(){started=false;pay.disabled=false;pay.textContent='Payer en ligne'};document.head.appendChild(s)});
+})();
+</script>"""
+    body = f"""<div data-nom-holder></div>
+<section class="ch-intro"><div class="wrap"><span class="kicker">Votre site, en 3 étapes</span><h1>Choisissez, validez, payez : c’est en ligne</h1>
+<p>Tout se fait ici, en quelques minutes. Rien n’est définitif : nous pouvons encore modifier après la mise en ligne.</p>
+<ul class="steps2"><li>1 · Vos choix</li><li>2 · Votre adresse web</li><li>3 · Paiement sécurisé</li></ul></div></section>
+<form id="fm" class="fm-all" novalidate onsubmit="return false">
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">1</span>Couleurs</h2><div class="opts">{P["pals"]}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">2</span>Polices de caractères</h2><div class="opts">{P["fonts"]}</div></div></section>
+<section class="ch-sec long"><div class="wrap"><h2><span class="ch-num">3</span>Logo</h2><p class="sub">Vous avez déjà un logo ? Choisissez une présentation, puis répondez à notre mail avec votre fichier : nous l’utiliserons à la place.</p><div class="opts">{P["logos"]}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">4</span>Ton des textes</h2><div class="opts">{P["tones"]}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">5</span>Photos</h2><div class="opts">{P["photos"]}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">6</span>Sections et fonctions en plus</h2><p class="sub">Cochez celles qui vous intéressent (facultatif).</p><ul class="lst">{P["lst"]}</ul></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">7</span>Votre adresse web</h2><p class="sub" id="domnote">Choisissez le nom de domaine de votre site. Tous ceux-ci étaient disponibles à l’envoi de notre mail.</p>
+<div class="doms" id="doms"><label class="dom"><input type="radio" name="domaine" value="__autre"><span style="white-space:nowrap">Autre :</span><input type="text" name="domaine_autre" placeholder="monsite.fr" style="border:0;border-bottom:1.5px solid #8b93a1;padding:4px;width:100%;min-width:0"></label></div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">8</span>Vos informations</h2><div class="fm">
+<div><label class="l" for="email">Votre e-mail *</label><input id="email" name="email" type="email" required autocomplete="email"></div>
+<div class="row2"><div><label class="l" for="contact">Votre nom (facultatif)</label><input id="contact" name="contact" type="text" autocomplete="name"></div><div><label class="l" for="tel_contact">Téléphone (facultatif)</label><input id="tel_contact" name="tel_contact" type="tel" autocomplete="tel"></div></div>
+<div><label class="l" for="services">Vos services à mettre en avant <small class="h">4 à 6, avec une phrase chacun</small></label><textarea id="services" name="services" rows="4"></textarea></div>
+<div><label class="l" for="zone">Adresse et zone d’intervention</label><textarea id="zone" name="zone" rows="2"></textarea></div>
+<div class="row2"><div><label class="l" for="horaires">Horaires</label><textarea id="horaires" name="horaires" rows="2"></textarea></div><div><label class="l" for="affiche">E-mail et téléphone à afficher sur le site</label><textarea id="affiche" name="affiche" rows="2"></textarea></div></div>
+<div><label class="l" for="legal">Informations légales <small class="h">forme juridique, SIRET, assurance, médiateur si vous vendez à des particuliers</small></label><textarea id="legal" name="legal" rows="3"></textarea></div>
+<div><label class="l" for="site_aime">Un site que vous aimez (facultatif)</label><input id="site_aime" name="site_aime" type="text"></div>
+<div><label class="l" for="remarques">Autre chose à nous dire ?</label><textarea id="remarques" name="remarques" rows="2"></textarea></div>
+<div style="position:absolute;left:-9999px" aria-hidden="true"><label>Ne pas remplir<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+<label class="check"><input type="checkbox" name="consent" value="1" required><span>J’accepte que ces informations soient utilisées par Stanislas Roux EI pour créer mon site (elles ne sont pas partagées). <a href="politique-confidentialite.html" style="text-decoration:underline">En savoir plus</a></span></label>
+<div><button class="btn" id="send" type="submit">Enregistrer mes choix</button><div id="msg" class="msg" role="status"></div></div>
+</div></div></section></form>
+<section class="ch-sec" id="paiement" style="padding-bottom:60px"><div class="wrap"><h2><span class="ch-num">9</span>Paiement sécurisé</h2>
+<div class="panel"><b>Mise en ligne de votre site</b><div class="price"><div><b>{E(str(pi))} €</b>une seule fois, aujourd’hui<br>création et mise en ligne</div><div><b>{E(str(pa))} €/mois</b>hébergement, domaine, sécurité<br>une modification par mois, sans engagement</div></div>
+<p style="font-size:.92rem;opacity:.85">Paiement par carte, traité par Stripe : nous ne voyons jamais vos données bancaires. Vous recevez une facture par e-mail. Résiliation à tout moment par simple mail.</p>
+<button class="btn" id="paybtn" type="button">Payer en ligne</button><div id="paymsg" class="msg" role="status"></div><div id="checkout"></div></div></div></section>
+<script>document.body.setAttribute('data-nom',{json.dumps(p["nom"], ensure_ascii=False)})</script>{js}"""
+    return page_shell(p, t, pal, "Mon site", body, "", extra_families=["Playfair Display", "Source Sans 3", "Space Grotesk", "Inter"] + families_of(t["h"], t["b"]), extra_css=CHOIX_CSS + COMMANDE_CSS)
+
+def build_merci(p, t, pal):
+    body = """<section class="ch-intro" style="padding-bottom:60px"><div class="wrap"><span class="kicker">Paiement</span><h1 id="t">Vérification du paiement…</h1>
+<p id="d">Un instant, nous confirmons votre paiement.</p></div></section>
+<script>(function(){var id=new URLSearchParams(location.search).get('session_id')||'';
+if(!id){document.getElementById('t').textContent='Aucun paiement à vérifier';document.getElementById('d').textContent='Écrivez-nous à artilien.contact@gmail.com si besoin.';return}
+fetch('/api/statut.php?session_id='+encodeURIComponent(id)).then(function(r){return r.json()}).then(function(j){
+ if(j.ok&&j.paid){document.getElementById('t').textContent='Merci, paiement reçu !';document.getElementById('d').textContent='Nous lançons la mise en ligne de votre site. Vous recevez un e-mail de confirmation et votre facture dans les prochaines heures. Pour toute question, répondez simplement à nos e-mails.'}
+ else{document.getElementById('t').textContent='Paiement non confirmé';document.getElementById('d').textContent='Votre paiement n’a pas abouti ou est encore en cours. Vous pouvez réessayer depuis la page précédente, ou nous écrire à artilien.contact@gmail.com.'}
+}).catch(function(){document.getElementById('t').textContent='Vérification impossible';document.getElementById('d').textContent='Écrivez-nous à artilien.contact@gmail.com : nous vérifions votre paiement.'})})();</script>"""
+    return page_shell(p, t, pal, "Merci", body, "", extra_css=CHOIX_CSS)
 
 CHROME = shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")
 
@@ -557,6 +665,8 @@ def build_site(path):
     for name, fn in pages.items():
         (out / name).write_text(fn(p, t, pal), encoding="utf-8")
     (out / "personnalisation.html").write_text(build_choix(p, t, pal, has_pdf=bool(CHROME)), encoding="utf-8")
+    (out / "commande.html").write_text(build_commande(p, t, pal), encoding="utf-8")
+    (out / "merci.html").write_text(build_merci(p, t, pal), encoding="utf-8")
     (out / "fonts").mkdir()
     for fn in sorted(USED_FONTS):
         shutil.copy(FONTS_DIR / fn, out / "fonts" / fn)
