@@ -264,6 +264,7 @@ FONT_SETS = {  # choix « Police » de la brochure : A = police du secteur (déf
     "moderne": {"label": "Moderne et nette", "h": "'Space Grotesk', system-ui, sans-serif", "b": "'Inter', system-ui, sans-serif"},
 }
 FONTS_DIR = ROOT / "fonts"
+PAL_LABELS = {"ble": "blé", "sauge": "sauge"}
 
 def families_of(*stacks):
     out = []
@@ -462,7 +463,7 @@ CHOIX_CSS = """
 """
 
 TONES = [
-    ("Convivial et proche", "Bienvenue chez {nom} ! {metier} à {ville} : on prend le temps de vous écouter et de bien faire les choses."),
+    ("Convivial et proche", "Bienvenue chez {nom} ! {Metier} à {ville} : on prend le temps de vous écouter et de bien faire les choses."),
     ("Sérieux et rassurant", "{nom}, {metier} à {ville} : un travail soigné, des prix clairs et un interlocuteur qui répond."),
     ("Haut de gamme et sobre", "{nom} — {metier} à {ville}. Savoir-faire, qualité et attention aux détails."),
 ]
@@ -489,7 +490,7 @@ def build_choix(p, t, pal, has_pdf=False):
     L = "ABC"
     pals = ""
     for i, (key, c) in enumerate(pal_items[:3]):
-        pals += (f'<div class="opt"><div class="tag"><i>{L[i]}</i>Ambiance {E(key)}</div><div class="pal">'
+        pals += (f'<div class="opt"><div class="tag"><i>{L[i]}</i>Ambiance {E(PAL_LABELS.get(key, key))}</div><div class="pal">'
                  f'<div class="mini" style="background:{c["bg"]};color:{c["ink"]}"><b style="font-family:var(--h)">{nom}</b>'
                  f'<span style="font-size:.85rem">{E(p["metier"].capitalize())} à {E(p["ville"])}</span><br><br><u style="background:{c["acc"]}">{E(p.get("cta", "Demander un devis"))}</u></div>'
                  f'<div class="sw">' + "".join(f'<span style="background:{c[k]}"></span>' for k in ("bg", "soft", "acc", "acc2", "ink")) + '</div></div></div>')
@@ -502,7 +503,7 @@ def build_choix(p, t, pal, has_pdf=False):
     for i, (k, lab) in enumerate(LOGOS.items(), 1):
         logos += (f'<div class="opt"><div class="tag"><i>{i}</i>{E(lab)}</div><div class="lgbox">{logo_link(p, k, "#")}</div>'
                   f'<div class="lgbox dark">{logo_link(p, k, "#")}</div></div>')
-    tones = "".join(f'<div class="opt tone"><div class="tag"><i>{L[i]}</i>{E(lab)}</div><div class="body"><q>{E(tx.format(nom=p["nom"], metier=p["metier"], ville=p["ville"]))}</q></div></div>' for i, (lab, tx) in enumerate(TONES))
+    tones = "".join(f'<div class="opt tone"><div class="tag"><i>{L[i]}</i>{E(lab)}</div><div class="body"><q>{E(tx.format(nom=p["nom"], metier=p["metier"], Metier=p["metier"].capitalize(), ville=p["ville"]))}</q></div></div>' for i, (lab, tx) in enumerate(TONES))
     photos = "".join(f'<div class="opt"><div class="tag"><i>{c}</i>{E(a)}</div><div class="body">{E(b)}</div></div>' for c, a, b in [
         ("A", "Vos photos", "Équipe, devanture, réalisations : vous nous envoyez 5 à 15 photos, nous les mettons en page."),
         ("B", "Visuels génériques", "Illustrations du métier, sans photo. Vous pourrez ajouter les vôtres plus tard."),
@@ -521,7 +522,7 @@ def build_choix(p, t, pal, has_pdf=False):
 <section class="ch-intro"><div class="wrap"><span class="kicker">Personnalisation</span><h1>Votre site, à l’image de {nom}</h1>
 <p>Voici tout ce que nous pouvons ajuster. Rien n’est définitif : vous choisissez, nous modifions, et vous pouvez encore changer après la mise en ligne.</p>
 <div class="ch-how"><b>Comment répondre ?</b> Par mail à {contact}, en donnant simplement vos codes. Exemple : « Couleurs B – Police A – Logo 3 – Ton C – Photos A ». Vous pouvez aussi écrire « je ne sais pas, conseillez-moi ».</div>{dl}</div></section>
-<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">1</span>Couleurs</h2><p class="sub">Trois ambiances pensées pour votre métier. La maquette utilise actuellement l’ambiance {E(p.get("palette", t["defaut_palette"]))}.</p><div class="opts">{pals}</div></div></section>
+<section class="ch-sec"><div class="wrap"><h2><span class="ch-num">1</span>Couleurs</h2><p class="sub">Trois ambiances pensées pour votre métier. La maquette utilise actuellement l’ambiance {E(PAL_LABELS.get(p.get("palette", t["defaut_palette"]), p.get("palette", t["defaut_palette"])))}.</p><div class="opts">{pals}</div></div></section>
 <section class="ch-sec"><div class="wrap"><h2><span class="ch-num">2</span>Polices de caractères</h2><p class="sub">Le style des titres et des textes.</p><div class="opts">{fonts}</div></div></section>
 <section class="ch-sec long"><div class="wrap"><h2><span class="ch-num">3</span>Logo</h2><p class="sub">Sept présentations de votre nom, sur fond clair et sur fond foncé. Si vous avez déjà un logo, envoyez-le : nous l’utiliserons à la place.</p><div class="opts">{logos}</div></div></section>
 <section class="ch-sec"><div class="wrap"><h2><span class="ch-num">4</span>Ton des textes</h2><p class="sub">La façon dont le site parle de vous. Nous réécrivons tous les textes dans le ton choisi.</p><div class="opts">{tones}</div></div></section>
