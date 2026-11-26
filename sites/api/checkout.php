@@ -10,7 +10,7 @@ $c = cfg();
 if (empty($c['stripe_secret']) || empty($c['stripe_publishable'])) out(['ok' => false, 'error' => 'config_stripe_manquante'], 500);
 $host = $_SERVER['HTTP_HOST'] ?? 'artilien.com';
 $p = [
-  'ui_mode' => 'embedded', 'mode' => 'subscription', 'locale' => 'fr',
+  'ui_mode' => 'embedded', 'mode' => 'subscription', 'locale' => 'fr', 'adaptive_pricing' => ['enabled' => 'false'],
   'return_url' => "https://$host/m/$slug/merci.html?session_id={CHECKOUT_SESSION_ID}",
   'line_items' => [
     ['quantity' => 1, 'price_data' => ['currency' => 'eur', 'unit_amount' => (int)($c['abo_cents'] ?? 2900), 'recurring' => ['interval' => 'month'],

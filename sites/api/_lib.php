@@ -11,7 +11,8 @@ function cfg(): array {
     static $c = null;
     if ($c !== null) return $c;
     $f = root_dir() . '/artilien-config.php';
-    $c = is_file($f) ? (array)(include $f) : [];
+    $c = [];
+    if (is_file($f)) { ob_start(); $r = include $f; ob_end_clean(); $c = is_array($r) ? $r : []; }
     return $c;
 }
 
