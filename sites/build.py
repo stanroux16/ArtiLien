@@ -524,7 +524,7 @@ def build_choix(p, t, pal, has_pdf=False):
     infl = "".join(f"<li>{E(x)}</li>" for x in infos)
     prix = ""
     if p.get("prix_install") and p.get("prix_abo"):
-        prix = f'<p><b>{E(str(p["prix_install"]))} € une seule fois</b>, puis <b>{E(str(p["prix_abo"]))} €/mois</b>, sans engagement de durée.</p>'
+        prix = f'<p><b>{E(str(p["prix_install"]))} € une seule fois</b>, puis <b>{E(str(p["prix_abo"]))} €/mois à partir du 2e mois</b> (le premier mois est offert), sans engagement de durée.</p>'
     dl = '<a class="btn ghost dl" href="personnalisation.pdf">Télécharger cette brochure en PDF</a>' if has_pdf else ""
     contact = E(p.get("contact_agence", "artilien.contact@gmail.com"))
     body = f"""
@@ -584,7 +584,7 @@ def build_commande(p, t, pal):
      try{sessionStorage.setItem('email',fd.get('email'))}catch(x){}}
    else{btn.disabled=false;btn.textContent='Enregistrer mes choix';msg.className='msg err';msg.textContent=({email_invalide:'Merci de vérifier votre adresse e-mail.',consentement:'Merci de cocher la case de consentement.',trop_rapide:'Un instant, puis réessayez.',trop_de_demandes:'Trop de tentatives, réessayez plus tard.'})[j.error]||'Un problème est survenu : écrivez-nous à artilien.contact@gmail.com.'}
   }).catch(function(){btn.disabled=false;btn.textContent='Enregistrer mes choix';msg.className='msg err';msg.textContent='Connexion impossible : écrivez-nous à artilien.contact@gmail.com.'})});
- var pay=document.getElementById('paybtn'), started=false;
+ var pay=document.getElementById('paybtn'), started=false, cg=document.getElementById('cgv'); cg.addEventListener('change',function(){pay.disabled=!cg.checked});
  pay.addEventListener('click',function(){ if(started)return; started=true; pay.disabled=true; pay.textContent='Chargement du paiement sécurisé…';
   var s=document.createElement('script');s.src='https://js.stripe.com/v3/';s.onload=function(){
    var em='';try{em=sessionStorage.getItem('email')||''}catch(x){}
@@ -623,9 +623,10 @@ def build_commande(p, t, pal):
 <div><button class="btn" id="send" type="submit">Enregistrer mes choix</button><div id="msg" class="msg" role="status"></div></div>
 </div></div></section></form>
 <section class="ch-sec" id="paiement" style="padding-bottom:60px"><div class="wrap"><h2><span class="ch-num">9</span>Paiement sécurisé</h2>
-<div class="panel"><b>Mise en ligne de votre site</b><div class="price"><div><b>{E(str(pi))} €</b>une seule fois, aujourd’hui<br>création et mise en ligne</div><div><b>{E(str(pa))} €/mois</b>hébergement, domaine, sécurité<br>une modification par mois, sans engagement</div></div>
+<div class="panel"><b>Mise en ligne de votre site</b><div class="price"><div><b>{E(str(pi))} €</b>une seule fois, aujourd’hui<br>création et mise en ligne</div><div><b>{E(str(pa))} €/mois</b>à partir du 2e mois (1er mois offert)<br>hébergement, domaine, sécurité, une modification par mois, sans engagement</div></div>
 <p style="font-size:.92rem;opacity:.85">Paiement par carte, traité par Stripe : nous ne voyons jamais vos données bancaires. Vous recevez une facture par e-mail. Résiliation à tout moment par simple mail.</p>
-<button class="btn" id="paybtn" type="button">Payer en ligne</button><div id="paymsg" class="msg" role="status"></div><div id="checkout"></div></div></div></section>
+<label class="check" style="margin:10px 0"><input type="checkbox" id="cgv"><span>J’ai lu et j’accepte les <a href="/cgv.html" target="_blank" rel="noopener" style="text-decoration:underline">conditions générales de vente</a>.</span></label>
+<button class="btn" id="paybtn" type="button" disabled>Payer en ligne</button><div id="paymsg" class="msg" role="status"></div><div id="checkout"></div></div></div></section>
 <script>document.body.setAttribute('data-nom',{json.dumps(p["nom"], ensure_ascii=False)})</script>{js}"""
     return page_shell(p, t, pal, "Mon site", body, "", extra_families=["Playfair Display", "Source Sans 3", "Space Grotesk", "Inter"] + families_of(t["h"], t["b"]), extra_css=CHOIX_CSS + COMMANDE_CSS)
 

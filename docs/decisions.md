@@ -20,3 +20,9 @@
 - Pages `commande.html` (choix + domaines `?d=` + ref `?r=`) et `merci.html` ; API PHP `sites/api/` (choix, checkout Stripe Embedded, statut) déployée dans le dépôt privé `api/`.
 - Clé Stripe côté serveur uniquement (`artilien-config.php` hors web), créée par Stan. Tests en mode test d'abord ; prospection relancée seulement après validation de Stan (B2 = PAUSE).
 - Blocage connu : agents planifiés sans accès au dépôt privé `artilien-maquettes`.
+
+## 26/11/2026 (soir) — Offre, CGV, facture
+- Offre : 190 € une fois + 29 €/mois **à partir du 2e mois** (1er mois offert = essai Stripe de 30 jours). Appliqué : checkout.php, page commande, brochure, mails.
+- CGV rédigées (`sites/legal/cgv.html`, publiées sur artilien.com/cgv.html) ; case « j'accepte les CGV » obligatoire avant le bouton de paiement. À faire relire par Stan (pas un avis juridique ; clients professionnels uniquement ; adresse du prestataire sur les factures).
+- Factures : envoyées automatiquement par Stripe au client (réglage Dashboard : e-mails de factures/reçus). TVA non applicable art. 293 B.
+- Paiement intégré validé en mode test ; passage en live = nouvelle clé dans artilien-config.php (jamais dans le dépôt).

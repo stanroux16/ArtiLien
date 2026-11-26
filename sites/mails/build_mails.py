@@ -52,7 +52,7 @@ prospection = wrap("Votre maquette de site est en ligne, sans engagement.",
     + para("Bonjour,<br><br>En cherchant {METIER} à {VILLE}, j'ai vu que {COMMERCE} n'a pas encore de site internet. J'ai préparé <b>votre maquette</b> : vos services, vos horaires, un formulaire de contact.")
     + button("Voir ma maquette", "{URL}", top=16, bottom=12)
     + checks(["Votre métier, vos services, vos horaires", "Un formulaire pour que vos clients vous écrivent", "Tout se modifie selon vos envies"])
-    + box("<b>{PRIX} € une seule fois</b>, puis <b>{ABO} €/mois</b> : hébergement, nom de domaine, sécurité et une modification par mois. Sans engagement de durée.")
+    + box("<b>{PRIX} € une seule fois</b>, puis <b>{ABO} €/mois à partir du 2e mois</b> (1er mois offert) : hébergement, nom de domaine, sécurité et une modification par mois. Sans engagement de durée.")
     + para("Ça vous plaît ? Répondez simplement <b>« OK »</b> : je vous envoie un lien pour choisir couleurs, logo et textes, et une dizaine de noms de domaine disponibles.<br><br>" + SIGN, top=4, bottom=26)
     + footer().replace("{LIGNE_SOURCE}", "Vous recevez ce message car votre adresse est publiée {SOURCE}. "))
 
@@ -80,7 +80,7 @@ apres_ok = wrap("Votre site est en route : choisissez votre style et votre adres
     + button("Voir toutes les options en PDF", "{URL_PDF}", primary=False, top=6, bottom=10)
     + steps
     + para('<b>Votre adresse web</b> : ces noms de domaine étaient disponibles à l’envoi de ce mail.<br>{CHIPS}', top=18, bottom=2)
-    + box("<b>{PRIX} € une seule fois</b> (création et mise en ligne), puis <b>{ABO} €/mois</b> : hébergement, nom de domaine, sécurité et une modification par mois. Sans engagement, vous restez propriétaire de vos contenus.")
+    + box("<b>{PRIX} € une seule fois</b> (création et mise en ligne), puis <b>{ABO} €/mois à partir du 2e mois</b> (1er mois offert) : hébergement, nom de domaine, sécurité et une modification par mois. Sans engagement, vous restez propriétaire de vos contenus.")
     + para("Une question, un doute ? Répondez simplement à ce mail.<br><br>" + SIGN, top=4, bottom=26)
     + footer().replace("{LIGNE_SOURCE}", ""))
 

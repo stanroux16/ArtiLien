@@ -14,12 +14,12 @@ $p = [
   'return_url' => "https://$host/m/$slug/merci.html?session_id={CHECKOUT_SESSION_ID}",
   'line_items' => [
     ['quantity' => 1, 'price_data' => ['currency' => 'eur', 'unit_amount' => (int)($c['abo_cents'] ?? 2900), 'recurring' => ['interval' => 'month'],
-       'product_data' => ['name' => 'Abonnement : hébergement, nom de domaine, sécurité et une modification par mois']]],
+       'product_data' => ['name' => 'Abonnement mensuel (1er mois offert) : hébergement, nom de domaine, sécurité, une modification par mois']]],
     ['quantity' => 1, 'price_data' => ['currency' => 'eur', 'unit_amount' => (int)($c['install_cents'] ?? 19000),
        'product_data' => ['name' => 'Création et mise en ligne de votre site internet (une seule fois)']]],
   ],
   'metadata' => ['slug' => $slug, 'ref' => $ref],
-  'subscription_data' => ['metadata' => ['slug' => $slug, 'ref' => $ref]],
+  'subscription_data' => ['trial_period_days' => 30, 'metadata' => ['slug' => $slug, 'ref' => $ref]],
 ];
 if ($ref !== '') $p['client_reference_id'] = $ref;
 $em = clean_line($in['email'] ?? '', 150);
